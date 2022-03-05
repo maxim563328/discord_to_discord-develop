@@ -3,7 +3,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 import time
 import random
-import urllib
 import string
 
 
@@ -29,7 +28,7 @@ time.sleep(3)
 
 last_channel = 0
 
-def main(servers, attachment=False):
+def main(servers):
     global last_channel
     if last_channel != servers["server_get_channel"]:
         driver.get("https://discord.com/channels/{}/{}".format(servers["server_get"], servers["server_get_channel"]))
@@ -47,72 +46,33 @@ def main(servers, attachment=False):
             break
     else:
         text = 403
-    if attachment is True:
-        img_data = {
-        "url": "",
-        "file_id": "",
-        "errors": []
-    }
-        for i in range(3):
-            try:
-                root = driver.find_element(By.CLASS_NAME, 'scrollerInner-2PPAp2')
-                messages_li = root.find_element(By.ID, f'chat-messages-{servers["last_id"]}')
-                img_data["url"] = messages_li.find_element(By.CLASS_NAME, f'originalLink-Azwuo9').get_attribute('href')
-                img_data["file_id"] = random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=6)
-            except:
-                driver.refresh()
-                time.sleep(3)
-            else:
-                break
-        else:
-            img_data["errors"].append(403)
-        if img_data["errors"] == []:
-            for i in range(3):
-                try:
-                    urllib.urlretrieve(img_data["url"], "attachments/{}.png".format(img_data["file_id"]))
-                except:
-                    time.sleep(1)
-                else:
-                    break
-            else:
-                img_data["errors"].append(405)
-
-            return {"text": text, "img": img_data}
-        else:
-            return {"text": text, "img": img_data}
-    return {"text": text}
-
-
-# 403 - can`t get image
-# 405 - can`t download image
-
-def get_image(servers):
+    
     img_data = {
-        "url": "",
-        "file_id": "",
-    }
+    "url": "",
+    "file_id": "",
+    "errors": []
+}
     for i in range(3):
         try:
             root = driver.find_element(By.CLASS_NAME, 'scrollerInner-2PPAp2')
             messages_li = root.find_element(By.ID, f'chat-messages-{servers["last_id"]}')
             img_data["url"] = messages_li.find_element(By.CLASS_NAME, f'originalLink-Azwuo9').get_attribute('href')
-            img_data["file_id"] = random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=6)
+            img_data["file_id"] = ''.join(random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=6))
         except:
             driver.refresh()
             time.sleep(3)
         else:
             break
     else:
-        return 403
-    
-    for i in range(3):
-        try:
-            urllib.urlretrieve(img_data["url"], "attachments/{}.png".format(img_data["file_id"]))
-        except:
-            time.sleep(1)
-        else:
-            break
+        img_data["errors"].append(403)
+    print(img_data)
+    if img_data["errors"] == []:
+        with open('attachments/{}.png'.format(img_data["file_id"]), 'wb') as file:
+            file.write(messages_li.find_element(By.CLASS_NAME, f'originalLink-Azwuo9').screenshot_as_png)
+        return {"text": text, "img": img_data}
     else:
-        return 405
-    return img_data
+        return {"text": text, "img": img_data}
 
+
+# 403 - can`t get image
+# 405 - can`t download image

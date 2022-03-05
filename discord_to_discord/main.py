@@ -1,7 +1,5 @@
-from lib2to3.pgen2.token import AWAIT
-from turtle import title
-from unicodedata import name
-import discord
+from discord import File
+import os
 import discord
 import sqlite3 as sq
 import content_fetcher
@@ -117,17 +115,29 @@ async def on_message(message):
 
 
     # get message vontent
-    if message.attachments:
-        content = content_fetcher.main(data, attachment=True)
-    else:
-        content = content_fetcher.main(data)["text"]
+    content = content_fetcher.main(data)
+    print(content)
     if content == '':
         return
     if content == 403:
-        await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание не удалось захватить".format(message.author.guild.name, message.channel.name, message.author, content))
+        await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание не удалось захватить".format(message.author.guild.name, message.channel.name, message.author, content["text"]))
         return
-    await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content))
-
+    if "img" in content.keys() and content["img"]["url"] != "":
+        if 405 in content["img"]["errors"]:
+            await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"] + " " + content["img"]["url"]))
+        else:
+            for root, dirs, files in os.walk("/attachments"):
+                for file in files:  
+                    if content["img"]["file_id"] in file:
+                        global path
+                        path = f"/attachments/{file}"
+                        break
+                else:
+                    await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"] + " " + content["img"]["url"]))
+                    return
+            await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"]), file=File(path))
+    else:
+        await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"]))
 
 
 client.run("Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)
