@@ -2,7 +2,7 @@ import discord
 import sqlite3 as sq
 import requests
 import asyncio
-import commands_module
+import discord_to_discord.commands_module as commands_module
 import random
 import string
 import os
@@ -22,7 +22,7 @@ users_data = {
     "accessed_accounts": {
         420989301170634762: {
         }
-        }
+    }
 }
 
 with sq.connect(r'database.db') as con:
@@ -59,7 +59,8 @@ async def on_message(message):
         if data == 10:
             await message.channel.send(f"**Бот не находится на сервере с ID - `{command_text[1]}`, пожалуйста, проверьте корректность ID ❌**")
             return
-        cur.execute("DELETE FROM server_list WHERE server_get=?", (int(command_text[1])))        
+        cur.execute("DELETE FROM server_list WHERE server_get=?",
+                    (int(command_text[1])))
         con.commit()
         await message.channel.send("**Удаление успешно выполнено. ✅**")
     if message.content.split(' ')[0] == "$set-server":
@@ -88,10 +89,10 @@ async def on_message(message):
         if data == 12:
             await message.channel.send(f"**Бот не находится на сервере с ID - `{command_text[3]}`, пожалуйста, проверьте корректность ID ❌**")
             return
-        cur.execute("INSERT INTO server_list(server_get, server_take, take_channel) VALUES (?, ?, ?)", (data["server_get"], data["server_take"], data["take_channel"]))        
+        cur.execute("INSERT INTO server_list(server_get, server_take, take_channel) VALUES (?, ?, ?)",
+                    (data["server_get"], data["server_take"], data["take_channel"]))
         con.commit()
         await message.channel.send("**Внесенные данные успешно сохранены. ✅**")
-
 
     if message.channel.type != ChannelType.text:
         return
@@ -105,25 +106,29 @@ async def on_message(message):
             break
     else:
         return
-    cur.execute("SELECT server_take FROM server_list WHERE server_get = ?", (guild,))
+    cur.execute(
+        "SELECT server_take FROM server_list WHERE server_get = ?", (guild,))
     guild_s = cur.fetchall()[0][0]
-    cur.execute("SELECT take_channel FROM server_list WHERE server_get = ? AND server_take = ?", (guild, guild_s))
+    cur.execute(
+        "SELECT take_channel FROM server_list WHERE server_get = ? AND server_take = ?", (guild, guild_s))
     channel = cur.fetchall()[0][0]
     channel = client.get_channel(channel)
     data = {
-    "server_get": message.guild.id,
-    "server_get_channel": message.channel.id,
-    "last_id": message.id
+        "server_get": message.guild.id,
+        "server_get_channel": message.channel.id,
+        "last_id": message.id
     }
     await asyncio.sleep(1)
-    r = requests.get(f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
+    r = requests.get(
+        f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
     data = r.json()
     for msg in data:
         if int(msg["id"]) == message.id:
             message_ = msg
 
     if message_["attachments"] != []:
-        path = 'attachments/' + download_attachment(message_["attachments"][0]["proxy_url"], message_["attachments"][0]["filename"], message_["attachments"][0]["content_type"], message_["attachments"][0]["size"])
+        path = 'attachments/' + download_attachment(message_["attachments"][0]["proxy_url"], message_[
+                                                    "attachments"][0]["filename"], message_["attachments"][0]["content_type"], message_["attachments"][0]["size"])
         await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, message_["content"]), file=File(path))
         os.remove(path)
         return
@@ -132,11 +137,14 @@ async def on_message(message):
 
 
 def download_attachment(url: str, filename: str, content_type: str, size: int):
-    file_id = "_" + "".join(random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=6))
+    file_id = "_" + "".join(random.choices(string.ascii_uppercase +
+                            string.digits + string.ascii_lowercase, k=6))
     filename = filename.split('.')[0] + file_id + '.' + filename.split('.')[1]
     r = requests.get(url, allow_redirects=True)
     open(f'attachments/{filename}', 'wb').write(r.content)
     return filename
 
+
 def main():
-    client.run("Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)
+    client.run(
+        "Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)

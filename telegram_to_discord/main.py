@@ -6,6 +6,7 @@ api_hash = '05afd9893e288c0d01d4d7fd175cd3a5'
 
 client = TelegramClient('anon', api_id, api_hash)
 
+
 async def bot_main():
     me = await client.get_me()
     print(me.stringify())
@@ -13,6 +14,7 @@ async def bot_main():
     message = await client.get_messages('https://t.me/python_academy', ids=types.InputMessagePinned())
     print(message)
 
+
 def main():
     with client:
-        client.loop.run_until_complete(main())
+        client.loop.run_until_complete(bot_main())
