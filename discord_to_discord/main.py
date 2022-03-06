@@ -138,5 +138,5 @@ def download_attachment(url: str, filename: str, content_type: str, size: int):
     open(f'attachments/{filename}', 'wb').write(r.content)
     return filename
 
-if __name__ == '__main__':
+def main():
     client.run("Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)
