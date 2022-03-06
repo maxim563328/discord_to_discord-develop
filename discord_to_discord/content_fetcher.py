@@ -50,6 +50,7 @@ def main(servers):
     img_data = {
     "url": "",
     "file_id": "",
+    "file": False,
     "errors": []
 }
     for i in range(3):
@@ -69,6 +70,7 @@ def main(servers):
     if img_data["errors"] == []:
         with open('attachments/{}.png'.format(img_data["file_id"]), 'wb') as file:
             file.write(messages_li.find_element(By.CLASS_NAME, f'originalLink-Azwuo9').screenshot_as_png)
+            img_data["file"] = True
         return {"text": text, "img": img_data}
     else:
         return {"text": text, "img": img_data}

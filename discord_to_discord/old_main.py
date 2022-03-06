@@ -1,14 +1,11 @@
+from discord import File
+import os
 import discord
 import sqlite3 as sq
-import requests
-import asyncio
-import commands_module
-import random
-import string
-import os
+import content_fetcher
 
 from disnake import ChannelType
-from discord import File
+import commands_module
 from discord.ext import commands
 
 
@@ -115,28 +112,28 @@ async def on_message(message):
     "server_get_channel": message.channel.id,
     "last_id": message.id
     }
-    await asyncio.sleep(1)
-    r = requests.get(f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
-    data = r.json()
-    for msg in data:
-        if int(msg["id"]) == message.id:
-            message_ = msg
 
-    if message_["attachments"] != []:
-        path = 'attachments/' + download_attachment(message_["attachments"][0]["proxy_url"], message_["attachments"][0]["filename"], message_["attachments"][0]["content_type"], message_["attachments"][0]["size"])
-        await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, message_["content"]), file=File(path))
-        os.remove(path)
+
+    # get message vontent
+    content = content_fetcher.main(data)
+    print(content)
+    if content == '':
         return
-    await asyncio.sleep(1)
-    await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, message_["content"]))
+    if content == 403:
+        await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание не удалось захватить".format(message.author.guild.name, message.channel.name, message.author, content["text"]))
+        return
+    if "img" in content.keys() and content["img"]["url"] != "":
+        if 405 in content["img"]["errors"]:
+            await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"] + " " + content["img"]["url"]))
+        else:
+            if content["img"]["file"] is False:
+                await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"] + " " + content["img"]["url"]))
+                return
+            else:    
+                await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"]), file=File("/attachments/{}.png".format(content["img"]["file_id"])))
+                os.remove(path="/attachments/{}.png".format(content["img"]["file_id"]))
+    else:
+        await channel.send("**[Новое сообщение]**\nСервер | **{}**\nКанал | `{}`\nАвтор | `{}`\nСодержание: {}".format(message.author.guild.name, message.channel.name, message.author, content["text"]))
 
 
-def download_attachment(url: str, filename: str, content_type: str, size: int):
-    file_id = "_" + "".join(random.choices(string.ascii_uppercase + string.digits + string.ascii_lowercase, k=6))
-    filename = filename.split('.')[0] + file_id + '.' + filename.split('.')[1]
-    r = requests.get(url, allow_redirects=True)
-    open(f'attachments/{filename}', 'wb').write(r.content)
-    return filename
-
-if __name__ == '__main__':
-    client.run("Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)
+client.run("Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)
