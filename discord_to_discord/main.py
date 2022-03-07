@@ -36,12 +36,40 @@ users_data = {
 }
 
 
+tg_pinned_groups = {}
+
+
 with sq.connect(r'database.db') as con:
     con = con
     cur = con.cursor()
 
 
-@tasks.loop(minutes=2.0)
+def chunk_text(text: str, chunk_lenght: int) -> list:
+    result = list()
+
+    left_border = 0
+    right_border = 0
+    iterations_count = len(text) // chunk_lenght + 1
+
+    for i in range(iterations_count):
+        if i == (iterations_count - 1):
+            right_border = len(text)
+        else:
+            right_border = left_border + chunk_lenght
+            part = text[left_border:right_border]
+
+            if ' ' in part:
+                right_border = left_border + part.rindex(' ')
+
+        part = text[left_border:right_border]
+        result.append(part)
+
+        left_border = right_border
+
+    return result
+
+
+@tasks.loop(seconds=5.0)
 async def check_telegram_pin_msg():
     cur.execute("SELECT * FROM tg_channels")
     res = cur.fetchall()
@@ -50,7 +78,20 @@ async def check_telegram_pin_msg():
     channel = client.get_channel(696285756225749026)
     for chat in res:
         channel_tg, content = await get_pinned_tg_message(chat[0], chat[1])
-        await channel.send(f"**[Новое закрепленное сообщение]\nКанал: `{channel_tg.title}`**\nСодержание:\n.\n.\n.\n{content.message}")
+        if content == None:
+            continue
+        if channel_tg.id in tg_pinned_groups.keys():
+            if tg_pinned_groups[channel_tg.id] == content.id:
+                continue
+        tg_pinned_groups[channel_tg.id] = content.id
+        if len(content.message) > 1500:
+            chunks = chunk_text(content.message, 1500)
+            for chunk in chunks:
+                await channel.send(f"**[Новое закрепленное сообщение]\nКанал: `{channel_tg.title}`\nID: {channel_tg.id}**\nСодержание ({chunks.index(chunk) + 1}/{len(chunks)}):\n.\n.\n.\n{chunk}")
+            await asyncio.sleep(2)
+            continue
+        await channel.send(f"**[Новое закрепленное сообщение]\nКанал: `{channel_tg.title}`\nID: {channel_tg.id}**\nСодержание:\n.\n.\n.\n{content.message}")
+        await asyncio.sleep(2)
 
 
 @client.event
@@ -231,13 +272,23 @@ async def check_valid_tg_add_link(command_text):
         if len(command_text) < 2:
             return 0
         hash_tg = command_text[1].split('/')[-1]
-        try:
-            result = await client_tg(functions.messages.CheckChatInviteRequest(hash=hash_tg))
-        except errors.InviteHashExpiredError:
-            return 11
-        except errors.InviteHashInvalidError:
-            return 12
-        return result
+        if len(hash_tg) == 16:
+            try:
+                channel = await client_tg.get_entity(f"@{hash_tg}")
+            except:
+                try:
+                    result = await client_tg(functions.messages.CheckChatInviteRequest(hash=hash_tg))
+                except errors.InviteHashExpiredError:
+                    return 11
+                except errors.InviteHashInvalidError:
+                    return 12
+
+                return result
+            else:
+                channel = await client_tg.get_entity(f"@{hash_tg}")
+                return channel
+        channel = await client_tg.get_entity(f"@{hash_tg}")
+        return channel
 
 
 async def check_valid_tg_add_decorator(command_text):
@@ -257,7 +308,6 @@ async def get_pinned_tg_message(id_: int, hash_: int):
         message = await client_tg.get_messages(channel, ids=InputMessagePinned())
         new_channel = await client_tg(
             functions.channels.GetChannelsRequest(id=[id_]))
-        print(new_channel.chats[0])
         return new_channel.chats[0], message
 
 

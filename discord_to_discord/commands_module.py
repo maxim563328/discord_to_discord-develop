@@ -13,10 +13,10 @@ def check_command_tg_type(command_text):
         return 0
     if command_text[1][0] == "@":
         return 300
-    if command_text[1][0] == "https":
+    if command_text[1][0:5] == "https":
         return 301
     else:
-        return False
+        return -1
 
 
 def check_valid_add(command_text):
