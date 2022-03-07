@@ -1,7 +1,20 @@
-from http import server
+from attr import has
 import requests
+from telethon import TelegramClient, functions, types, errors
 
-def check_valid_set(command_text):
+
+def check_command_tg_type(command_text):
+    if len(command_text) < 2:
+        return 0
+    if command_text[1][0] == "@":
+        return 300
+    if command_text[1][0] == "https":
+        return 301    
+    else:
+        return False
+
+
+def check_valid_add(command_text):
     if len(command_text) < 4:
         return 0    
     if not command_text[1].isdigit():
