@@ -12,6 +12,10 @@ import os
 from disnake import ChannelType
 from discord import File
 from discord.ext import commands, tasks
+from telethon.tl.types import InputMessagePinned
+from telethon.tl.functions.channels import GetChannelsRequest
+from telethon.tl.types import InputChannel
+from telethon.tl.types.messages import ChatFull
 
 from telethon import TelegramClient, types, errors, functions, utils
 
@@ -37,22 +41,28 @@ with sq.connect(r'database.db') as con:
     cur = con.cursor()
 
 
-@tasks.loop(minutes=1.0)
+@tasks.loop(minutes=2.0)
 async def check_telegram_pin_msg():
-    message = await client_tg.get_messages('https://t.me/python_academy', ids=types.InputMessagePinned())
-    return message
+    cur.execute("SELECT * FROM tg_channels")
+    res = cur.fetchall()
+    if res == []:
+        return
+    channel = client.get_channel(696285756225749026)
+    for chat in res:
+        channel_tg, content = await get_pinned_tg_message(chat[0], chat[1])
+        await channel.send(f"**[Новое закрепленное сообщение]\nКанал: `{channel_tg.title}`**\nСодержание:\n.\n.\n.\n{content.message}")
 
 
 @client.event
 async def on_ready():
     name = client.user.name + '#' + client.user.discriminator
-
-    print(f"""#                             
-#     Доброго пожаловать!     
-#                             
-#     Бот успешно запущен!    
-#     Имя бота: {name}        
-#                          
+    check_telegram_pin_msg.start()
+    print(f"""#
+#     Доброго пожаловать!
+#
+#     Бот успешно запущен!
+#     Имя бота: {name}
+#
 """)
 
 
@@ -66,10 +76,16 @@ async def on_message(message):
         if checker == 0:
             await message.channel.send("**Вы не указали канал телеграм ❌**")
             return
-        elif checker == 301: 
+        elif checker == 301:
             data = await check_valid_tg_add_link(command_text)
-        elif checker == 300: 
+        elif checker == 300:
             data = await check_valid_tg_add_decorator(command_text)
+            if data == 404:
+                await message.channel.send("**Канал не найден, проерьте правильность введенного @логина ❌**")
+                return
+            if type(data) != types.Channel:
+                await message.channel.send("**Чат, приглашение на которой вы прислали, не является каналом ❌**")
+                return
         else:
             await message.channel.send("**Вы не верно указали канал телеграм ❌**")
             return
@@ -82,16 +98,27 @@ async def on_message(message):
         if data == 12:
             await message.channel.send("**Чат, приглашение которого вы присылали, не существует ❌**")
             return
-        if data.channel is False:
-            await message.channel.send("**Чат, приглашение на которой вы прислали, не является каналом ❌**")
-            return
-        if data.public is False:
-            await message.channel.send("**Канал, который вы прислали, является закрытым ❌**")
-            return
-        cur.execute("INSERT INTO tg_channels VALUES(?)", (data.chat.id,))
-        con.commit()
-        await message.channel.send(f"**Канал {data.title}**")
-        
+        if type(data) != types.Channel:
+            if data.channel is False:
+                await message.channel.send("**Чат, приглашение на которой вы прислали, не является каналом ❌**")
+                return
+            if data.public is False:
+                await message.channel.send("**Канал, который вы прислали, является закрытым ❌**")
+                return
+            if commands_module.check_in_data_base(data.chat.id, "tg_channels", "channel_id") == 1:
+                await message.channel.send("**Данный канал уже есть в базе данных ❌**")
+                return
+            cur.execute("INSERT INTO tg_channels VALUES(?, ?)",
+                        (data.id, data.access_hash))
+            con.commit()
+        else:
+            if commands_module.check_in_data_base(data.id, "tg_channels", "channel_id") == 1:
+                await message.channel.send("**Данный канал уже есть в базе данных ❌**")
+                return
+            cur.execute("INSERT INTO tg_channels VALUES(?, ?)",
+                        (data.id, data.access_hash))
+            con.commit()
+        await message.channel.send(f"**Канал `{data.title}` успешно сохранён ✅**")
 
     if message.content.split(' ')[0] == "$rem-server":
         if message.author.id not in users_data["accessed_accounts"].keys():
@@ -107,10 +134,13 @@ async def on_message(message):
         if data == 10:
             await message.channel.send(f"**Бот не находится на сервере с ID - `{command_text[1]}`, пожалуйста, проверьте корректность ID ❌**")
             return
+        if commands_module.check_in_data_base(int(command_text[1]), "server_list", "server_get") == 0:
+            await message.channel.send("**Данного сервера нет в базе данных ❌**")
+            return
         cur.execute("DELETE FROM server_list WHERE server_get=?",
                     (int(command_text[1])))
         con.commit()
-        await message.channel.send("**Удаление успешно выполнено. ✅**")
+        await message.channel.send("**Удаление успешно выполнено ✅**")
     if message.content.split(' ')[0] == "$add-server":
         if message.author.id not in users_data["accessed_accounts"].keys():
             return
@@ -137,10 +167,13 @@ async def on_message(message):
         if data == 12:
             await message.channel.send(f"**Бот не находится на сервере с ID - `{command_text[3]}`, пожалуйста, проверьте корректность ID ❌**")
             return
+        if commands_module.check_in_data_base(data["server_get"], "server_list", "server_get") == 1:
+            await message.channel.send("**Данный сервер уже есть в базе данных ❌**")
+            return
         cur.execute("INSERT INTO server_list(server_get, server_take, take_channel) VALUES (?, ?, ?)",
                     (data["server_get"], data["server_take"], data["take_channel"]))
         con.commit()
-        await message.channel.send("**Внесенные данные успешно сохранены. ✅**")
+        await message.channel.send("**Внесенные данные успешно сохранены ✅**")
 
     if message.channel.type != ChannelType.text:
         return
@@ -193,22 +226,17 @@ def download_attachment(url: str, filename: str, content_type: str, size: int):
     return filename
 
 
-
-
-
 async def check_valid_tg_add_link(command_text):
     async with client_tg:
         if len(command_text) < 2:
             return 0
         hash_tg = command_text[1].split('/')[-1]
-        print(hash_tg)
         try:
             result = await client_tg(functions.messages.CheckChatInviteRequest(hash=hash_tg))
         except errors.InviteHashExpiredError:
             return 11
         except errors.InviteHashInvalidError:
             return 12
-        print(result)
         return result
 
 
@@ -216,8 +244,21 @@ async def check_valid_tg_add_decorator(command_text):
     async with client_tg:
         if len(command_text) < 2:
             return 0
-        entity = await utils.get_profile(command_text[1])
-        print(entity)
+        try:
+            peer = await client_tg.get_entity(command_text[1])
+        except:
+            return 404
+        return peer
+
+
+async def get_pinned_tg_message(id_: int, hash_: int):
+    async with client_tg:
+        channel = InputChannel(id_, hash_)
+        message = await client_tg.get_messages(channel, ids=InputMessagePinned())
+        new_channel = await client_tg(
+            functions.channels.GetChannelsRequest(id=[id_]))
+        print(new_channel.chats[0])
+        return new_channel.chats[0], message
 
 
 if __name__ == '__main__':
