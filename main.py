@@ -112,10 +112,67 @@ async def on_ready():
     # Старт телеграм 'бота', требуется для начала отслеживания ивентов
     await client_tg.start()
     await client_tg.run_until_disconnected()
-
+    
 
 @client.event
 async def on_message(message):
+    # Команда для удаления телеграм канала с закрепленными сообщениями и отслеживанием контента
+    if message.content.split(' ')[0] == "$rem-tg-channel":
+        if message.author.id not in users_data["accessed_accounts"].keys():
+            return
+        command_text = message.content.split(' ')
+        # Проверка второго аргумента команды, на тип (@username или https)
+        checker = commands_module.check_command_tg_type(command_text)
+        if checker == 0:
+            await message.channel.send("**Вы не указали канал телеграм ❌**")
+            return
+        elif checker == 301:
+            data = await check_valid_tg_add_link(command_text)
+        elif checker == 300:
+            data = await check_valid_tg_add_decorator(command_text)
+            if data == 404:
+                await message.channel.send("**Канал не найден, проерьте правильность введенного @логина ❌**")
+                return
+            if type(data) != types.Channel:
+                await message.channel.send("**Чат, приглашение на которой вы прислали, не является каналом ❌**")
+                return
+        else:
+            await message.channel.send("**Вы не верно указали канал телеграм ❌**")
+            return
+        if data == 0:
+            await message.channel.send("**Вы не указали канал телеграм ❌**")
+            return
+        if data == 11:
+            await message.channel.send("**Указанное вами приглашение больше не действительно ❌**")
+            return
+        if data == 12:
+            await message.channel.send("**Чат, приглашение которого вы присылали, не существует ❌**")
+            return
+        if type(data) != types.Channel:
+            if data == 101:
+                await message.channel.send("**Вы отправили приглашение на беседу ❌**")
+                return
+            if data.channel is False:
+                await message.channel.send("**Чат, приглашение на которой вы прислали, не является каналом ❌**")
+                return
+            if data.public is False:
+                await message.channel.send("**Канал, который вы прислали, является закрытым ❌**")
+                return
+            if commands_module.check_in_data_base(data.chat.id, "tg_channels", "channel_id") == 1:
+                await message.channel.send("**Данный канал уже есть в базе данных ❌**")
+                return
+            cur.execute("INSERT INTO tg_channels VALUES(?, ?)",
+                        (data.id, data.access_hash))
+            con.commit()
+        else:
+            if commands_module.check_in_data_base(data.id, "tg_channels", "channel_id") != 1:
+                await message.channel.send("**Данного канала нет в базе данных ❌**")
+                return
+            cur.execute("DELETE FROM tg_channels WHERE channel_id",
+                   data.id,)
+            con.commit()
+        await message.channel.send(f"**Канал `{data.title}` успешно удалён ✅**")
+
     # Команда для добавления телеграм канала с закрепленными сообщениями и отслеживанием контента
     if message.content.split(' ')[0] == "$add-tg-channel":
         if message.author.id not in users_data["accessed_accounts"].keys():
