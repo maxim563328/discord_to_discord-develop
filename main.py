@@ -169,7 +169,7 @@ async def on_message(message):
                 await message.channel.send("**Данного канала нет в базе данных ❌**")
                 return
             cur.execute("DELETE FROM tg_channels WHERE channel_id",
-                   data.id,)
+                   (data.id,))
             con.commit()
         await message.channel.send(f"**Канал `{data.title}` успешно удалён ✅**")
 
