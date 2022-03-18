@@ -36,9 +36,8 @@ def check_valid_add(command_text):
     }
 
     r = requests.get(
-        "https://discord.com/api/v9/users/@me/guilds?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
+        "https://discord.com/api/v9/users/@me/guilds?token=OTUxODEzNjgzOTcyMDIyMjcy.YjSiPA.WZuN5Wcavef5MnKoQ1jw5ACgIhE")
     data_new = r.json()
-
     for element in data_new:
         if data["server_get"] == int(element["id"]):
             break

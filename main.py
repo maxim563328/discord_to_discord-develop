@@ -1,4 +1,5 @@
 from ctypes import util
+from html import entities
 from tabnanny import check
 import discord
 import sqlite3 as sq
@@ -14,8 +15,8 @@ from disnake import ChannelType
 from discord import File
 from discord.ext import commands, tasks
 from telethon.tl.types import InputMessagePinned
-from telethon.tl.functions.messages import CheckChatInviteRequest
 from telethon.tl.types import InputChannel
+from telethon.tl.types import MessageEntityTextUrl
 
 from telethon import TelegramClient, types, errors, functions, events
 
@@ -178,7 +179,6 @@ async def on_message(message):
         if message.author.id not in users_data["accessed_accounts"].keys():
             return
         command_text = message.content.split(' ')
-
         # Проверка второго аргумента команды, на тип (@username или https)
         checker = commands_module.check_command_tg_type(command_text)
         if checker == 0:
@@ -319,7 +319,7 @@ async def on_message(message):
     }
     await asyncio.sleep(1)
     r = requests.get(
-        f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
+        f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token=OTUxODEzNjgzOTcyMDIyMjcy.YjSiPA.WZuN5Wcavef5MnKoQ1jw5ACgIhE")
     data = r.json()
     for msg in data:
         if int(msg["id"]) == message.id:
@@ -349,8 +349,12 @@ def get_channels_for_event(event_type: str = 'GetChannelPost'):
 
 
 # Событие для отслеживания новых постов канала
-@client_tg.on(events.NewMessage(incoming=True, outgoing=True, chats=get_channels_for_event()))
+@client_tg.on(events.NewMessage(incoming=True, outgoing=True))
 async def tg_main_OnMessage(event):
+    if "channel_id" not in dir(event.peer_id):
+        return
+    if event.peer_id.channel_id not in get_channels_for_event():
+        return
     channel_discord = client.get_channel(951098273479934005)
     channel_data = await client_tg.get_entity(event.peer_id.channel_id)
     channel_name = channel_data.title
@@ -361,13 +365,23 @@ async def tg_main_OnMessage(event):
 ID канала: `{channel_id}`
 Содержание:**
 {event.message.message}
-
-
 """)
+    if (event.entities != []) and (event.entities != None):
+        urls = []
+        for ent in event.entities:
+            if type(ent) == MessageEntityTextUrl:
+                urls.append(ent)
+        if urls == []:
+            return
+        result = """**[Ссылки из сообщения канала]**"""
+        for u in urls:
+            result += f"\n({u.url})"
+        await channel_discord.send(result)
+
 
 
 # Событие для ловли ссылок в чате телеграм
-@client_tg.on(events.NewMessage(incoming=False, outgoing=True, chats=(760992172)))
+@client_tg.on(events.NewMessage(incoming=False, outgoing=True, chats=(760992172, 725734186)))
 async def new_msg(event):
     content = event.message.message.split("\n")
     channel = client.get_channel(951098273479934005)
@@ -380,7 +394,7 @@ async def new_msg(event):
     author = await client_tg.get_entity(event.message.from_id.user_id)
     if result.split("\n") == ['']:
         return
-    await channel.send(f"Отправитель: `@{author.username}`\nСообщение:\n{result}")
+    await channel.send(f"**[Новая ссылка в чате]**\nОтправитель: `@{author.username}`\nСообщение:\n{result}")
 
 
 # Скачать вложения дискорд сообщения
@@ -436,4 +450,4 @@ async def get_pinned_tg_message(id_: int, hash_: int):
 
 if __name__ == '__main__':
     client.run(
-        "Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE", bot=False)
+        "OTUxODEzNjgzOTcyMDIyMjcy.YjSiPA.WZuN5Wcavef5MnKoQ1jw5ACgIhE", bot=False)
