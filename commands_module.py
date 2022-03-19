@@ -1,6 +1,6 @@
 import requests
 import sqlite3 as sq
-from telethon import TelegramClient, functions, types, errors
+from main import TOKEN
 
 
 with sq.connect(r'database.db') as con:
@@ -36,7 +36,7 @@ def check_valid_add(command_text):
     }
 
     r = requests.get(
-        "https://discord.com/api/v9/users/@me/guilds?token=OTUxODEzNjgzOTcyMDIyMjcy.YjSiPA.WZuN5Wcavef5MnKoQ1jw5ACgIhE")
+        f"https://discord.com/api/v9/users/@me/guilds?token={TOKEN}")
     data_new = r.json()
     for element in data_new:
         if data["server_get"] == int(element["id"]):
@@ -64,7 +64,7 @@ def check_valid_rem(command_text):
     if not command_text[1].isdigit():
         return 1
     r = requests.get(
-        "https://discord.com/api/v9/users/@me/guilds?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
+        f"https://discord.com/api/v9/users/@me/guilds?token={TOKEN}")
     data_new = r.json()
     for element in data_new:
         if int(command_text[1]) == int(element["id"]):

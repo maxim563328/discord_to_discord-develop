@@ -1,6 +1,3 @@
-from ctypes import util
-from html import entities
-from tabnanny import check
 import discord
 import sqlite3 as sq
 import requests
@@ -22,13 +19,18 @@ from telethon import TelegramClient, types, errors, functions, events
 
 URL_REGEX = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
 
+TOKEN = ""
+
 intents = discord.Intents.all()
 client = commands.Bot(
     command_prefix="$", intents=intents)
 
 api_id = 11541487
 api_hash = '05afd9893e288c0d01d4d7fd175cd3a5'
-client_tg = TelegramClient('anon', api_id, api_hash)
+client_tg = TelegramClient('user', api_id, api_hash)
+
+
+channel = 951098273479934005
 
 
 users_data = {
@@ -77,7 +79,7 @@ async def check_telegram_pin_msg():
     res = cur.fetchall()
     if res == []:
         return
-    channel = client.get_channel(951098273479934005)
+    channel = channel
     for chat in res:
         channel_tg, content = await get_pinned_tg_message(chat[0], chat[1])
         if content == None:
@@ -319,7 +321,7 @@ async def on_message(message):
     }
     await asyncio.sleep(1)
     r = requests.get(
-        f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token=OTUxODEzNjgzOTcyMDIyMjcy.YjSiPA.WZuN5Wcavef5MnKoQ1jw5ACgIhE")
+        f"https://discord.com/api/v9/channels/{message.channel.id}/messages?token={TOKEN}")
     data = r.json()
     for msg in data:
         if int(msg["id"]) == message.id:
@@ -355,7 +357,7 @@ async def tg_main_OnMessage(event):
         return
     if event.peer_id.channel_id not in get_channels_for_event():
         return
-    channel_discord = client.get_channel(951098273479934005)
+    channel_discord = channel
     channel_data = await client_tg.get_entity(event.peer_id.channel_id)
     channel_name = channel_data.title
     channel_id = channel_data.id
@@ -384,7 +386,7 @@ ID канала: `{channel_id}`
 @client_tg.on(events.NewMessage(incoming=False, outgoing=True, chats=(760992172, 725734186)))
 async def new_msg(event):
     content = event.message.message.split("\n")
-    channel = client.get_channel(951098273479934005)
+    channel = channel
     result = ''
     for word in content:
         word = word.split(" ")
@@ -450,4 +452,4 @@ async def get_pinned_tg_message(id_: int, hash_: int):
 
 if __name__ == '__main__':
     client.run(
-        "OTUxODEzNjgzOTcyMDIyMjcy.YjSiPA.WZuN5Wcavef5MnKoQ1jw5ACgIhE", bot=False)
+        TOKEN, bot=False)
