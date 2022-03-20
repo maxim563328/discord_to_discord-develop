@@ -1,7 +1,7 @@
 import requests
 import sqlite3 as sq
-from telethon import TelegramClient, functions, types, errors
 
+TOKEN = ""
 
 with sq.connect(r'database.db') as con:
     con = con
@@ -20,7 +20,7 @@ def check_command_tg_type(command_text):
 
 
 def check_valid_add(command_text):
-    if len(command_text) < 4:
+    if len(command_text) < 5:
         return 0
     if not command_text[1].isdigit():
         return 1
@@ -28,17 +28,19 @@ def check_valid_add(command_text):
         return 2
     if not command_text[3].isdigit():
         return 3
+    if not command_text[4].isdigit():
+        return 4
 
     data = {
         "server_get": int(command_text[1]),
-        "server_take": int(command_text[2]),
-        "take_channel": int(command_text[3]),
+        "get_channel": int(command_text[2]),
+        "server_take": int(command_text[3]),
+        "take_channel": int(command_text[4]),
     }
 
     r = requests.get(
-        "https://discord.com/api/v9/users/@me/guilds?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
+        f"https://discord.com/api/v9/users/@me/guilds?token={TOKEN}")
     data_new = r.json()
-
     for element in data_new:
         if data["server_get"] == int(element["id"]):
             break
@@ -65,7 +67,7 @@ def check_valid_rem(command_text):
     if not command_text[1].isdigit():
         return 1
     r = requests.get(
-        "https://discord.com/api/v9/users/@me/guilds?token=Njk2NzE5NDUxMjE4OTAzMTIw.YiImfg._LAPZFQ8vRQQzp_7H3_YEpRzDUE")
+        f"https://discord.com/api/v9/users/@me/guilds?token={TOKEN}")
     data_new = r.json()
     for element in data_new:
         if int(command_text[1]) == int(element["id"]):
