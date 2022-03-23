@@ -30,7 +30,7 @@ api_hash = '05afd9893e288c0d01d4d7fd175cd3a5'
 client_tg = TelegramClient('user', api_id, api_hash)
 
 
-channel = 954769141275959310
+channel = client.get_channel(951098273479934005)
 
 
 users_data = {
@@ -81,6 +81,7 @@ async def check_telegram_pin_msg():
     res = cur.fetchall()
     if res == []:
         return
+    channel = client.get_channel(951098273479934005)
     channel = channel
     for chat in res:
         channel_tg, content = await get_pinned_tg_message(chat[0], chat[1])
@@ -376,6 +377,7 @@ def get_channels_for_event(event_type: str = 'GetChannelPost'):
 # Событие для отслеживания новых постов канала
 @client_tg.on(events.NewMessage(incoming=True, outgoing=True))
 async def tg_main_OnMessage(event):
+    channel = client.get_channel(951098273479934005)
     if "channel_id" not in dir(event.peer_id):
         return
     if event.peer_id.channel_id not in get_channels_for_event():
@@ -405,9 +407,14 @@ ID канала: `{channel_id}`
 
 
 # Событие для ловли ссылок в чате телеграм
-@client_tg.on(events.NewMessage(incoming=False, outgoing=True, chats=(760992172, 725734186)))
+@client_tg.on(events.NewMessage(incoming=True, outgoing=True))
 async def new_msg(event):
+    if "peer_id" in dir(event.peer_id):
+        return
+    if (event.is_channel is False) or (event.is_group is False):
+        return
     content = event.message.message.split("\n")
+    channel = client.get_channel(951098273479934005)
     channel = channel
     result = ''
     for word in content:
@@ -418,7 +425,7 @@ async def new_msg(event):
     author = await client_tg.get_entity(event.message.from_id.user_id)
     if result.split("\n") == ['']:
         return
-    await channel.send(f"**[Новая ссылка в чате]**\nОтправитель: `@{author.username}`\nСообщение:\n{result}")
+    await channel.send(f"**[Новая ссылка в чате]**\nЧат: `{event.chat.title}`\nОтправитель: `@{author.username}`\nСообщение:\n{result}")
 
 
 # Скачать вложения дискорд сообщения
@@ -473,5 +480,6 @@ async def get_pinned_tg_message(id_: int, hash_: int):
 
 
 if __name__ == '__main__':
+    channel = channel
     client.run(
         TOKEN, bot=False)
