@@ -381,7 +381,6 @@ async def tg_main_OnMessage(event):
     if "channel_id" not in dir(event.peer_id):
         return
     if event.peer_id.channel_id not in get_channels_for_event():
-        print(get_channels_for_event())
         return
     channel_discord = channel
     channel_data = await client_tg.get_entity(event.peer_id.channel_id)
